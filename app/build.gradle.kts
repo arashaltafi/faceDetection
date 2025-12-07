@@ -56,16 +56,16 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     // CameraX
-    implementation("androidx.camera:camera-core:1.5.2")
-    implementation("androidx.camera:camera-camera2:1.5.2")
-    implementation("androidx.camera:camera-lifecycle:1.5.2")
-    implementation("androidx.camera:camera-view:1.5.2")
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     // ML Kit Face Detection
-    implementation("com.google.mlkit:face-detection:16.1.7")
+    implementation(libs.face.detection)
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation(libs.kotlinx.coroutines.android)
 
     // test
     testImplementation(libs.junit)
