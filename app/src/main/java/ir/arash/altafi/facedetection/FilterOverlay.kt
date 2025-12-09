@@ -14,17 +14,14 @@ import kotlin.math.hypot
 
 @Composable
 fun FilterOverlay(faces: List<Face>, selectedFilter: FaceFilter) {
-
     if (selectedFilter == FaceFilter.NONE) return
 
     val filterBitmap = selectedFilter.resId?.let { ImageBitmap.imageResource(it) }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
-
         if (filterBitmap == null) return@Canvas
 
         faces.forEach { face ->
-
             val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)?.position
             val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)?.position
 

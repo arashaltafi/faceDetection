@@ -16,7 +16,11 @@ import androidx.compose.ui.unit.dp
 fun FaceFilterScreen(innerPadding: PaddingValues) {
     var selectedFilter by remember { mutableStateOf(FaceFilter.NONE) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+    ) {
         // Camera + Filters
         Box(modifier = Modifier.weight(1f)) {
             CameraWithFilters(selectedFilter)
