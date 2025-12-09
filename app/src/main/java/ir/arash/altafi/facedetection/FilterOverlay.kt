@@ -22,50 +22,75 @@ import kotlin.math.hypot
 fun FilterOverlay(
     faces: List<Face>,
     selectedFilter: FaceFilter,
-    previewView: PreviewView?
+    previewView: PreviewView?,
+    imgW: Int,
+    imgH: Int,
+    rotation: Int,
 ) {
     if (selectedFilter == FaceFilter.NONE || previewView == null) return
-
     val filterBitmap = selectedFilter.resId?.let { ImageBitmap.imageResource(it) }
+
+    val viewW = previewView.width.toFloat()
+    val viewH = previewView.height.toFloat()
+    if (viewW == 0f || viewH == 0f || imgW == 0 || imgH == 0) return
 
     Canvas(
         modifier = Modifier.fillMaxSize()
     ) {
         if (filterBitmap == null) return@Canvas
 
-        val transform = previewView.outputTransform ?: return@Canvas
-        val matrix = transform.matrix
-
         fun mapPoint(x: Float, y: Float): Pair<Float, Float> {
-            val pts = floatArrayOf(x, y)
-            matrix.mapPoints(pts)
-            return pts[0] to pts[1]
+            var px = x
+            var py = y
+
+            when (rotation) {
+                0 -> {} // no change
+                90 -> {
+                    px = y
+                    py = imgW - x
+                }
+                180 -> {
+                    px = imgW - x
+                    py = imgH - y
+                }
+                270 -> {
+                    px = imgH - y
+                    py = x
+                }
+            }
+
+            // Front camera mirror
+            px = imgW - px
+
+            val scaleX = viewW / imgW
+            val scaleY = viewH / imgH
+
+            return px * scaleX to py * scaleY
         }
 
         faces.forEach { face ->
-            val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)?.position ?: return@forEach
-            val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)?.position ?: return@forEach
+            val left = face.getLandmark(FaceLandmark.LEFT_EYE)?.position ?: return@forEach
+            val right = face.getLandmark(FaceLandmark.RIGHT_EYE)?.position ?: return@forEach
 
-            // Map MLKit -> View coordinates
-            val (lx, ly) = mapPoint(leftEye.x, leftEye.y)
-            val (rx, ry) = mapPoint(rightEye.x, rightEye.y)
+            val (lx, ly) = mapPoint(left.x, left.y)
+            val (rx, ry) = mapPoint(right.x, right.y)
 
-            val centerX = (lx + rx) / 2f
-            val centerY = (ly + ry) / 2f
+            val cx = (lx + rx) / 2f
+            val cy = (ly + ry) / 2f
 
             val eyeDistance = hypot((rx - lx), (ry - ly))
-            val scale = (eyeDistance / filterBitmap.width) * 2.2f
+            val scale = eyeDistance / filterBitmap.width * 2.2f
 
-            val dstWidth = (filterBitmap.width * scale).toInt()
-            val dstHeight = (filterBitmap.height * scale).toInt()
+            val dstW = (filterBitmap.width * scale).toInt()
+            val dstH = (filterBitmap.height * scale).toInt()
 
-            val offsetX = centerX - dstWidth / 2
-            val offsetY = centerY - dstHeight / 2
+            val offX = cx - dstW / 2
+            val offY = cy - dstH / 2
 
             drawImage(
                 image = filterBitmap,
-                dstOffset = IntOffset(offsetX.toInt(), offsetY.toInt()),
-                dstSize = IntSize(dstWidth, dstHeight)
+                dstOffset = IntOffset(offX.toInt(), offY.toInt()),
+                dstSize = IntSize(dstW, dstH)
             )
         }
     }

@@ -45,6 +45,10 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
     val previewViewState = remember { mutableStateOf<PreviewView?>(null) }
     var facesDetected by remember { mutableStateOf<List<Face>>(emptyList()) }
 
+    var imageWidth by remember { mutableStateOf(0) }
+    var imageHeight by remember { mutableStateOf(0) }
+    var imageRotation by remember { mutableStateOf(0) }
+
     Box(Modifier.fillMaxSize()) {
         // CAMERA PREVIEW
         AndroidView(
@@ -66,15 +70,16 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
 
                     analysis.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
                         val mediaImage = imageProxy.image ?: return@setAnalyzer
-
                         val rotation = imageProxy.imageInfo.rotationDegrees
                         val input = InputImage.fromMediaImage(mediaImage, rotation)
 
                         faceDetector.process(input)
                             .addOnSuccessListener { faces ->
                                 facesDetected = faces
+                                imageWidth = mediaImage.width
+                                imageHeight = mediaImage.height
+                                imageRotation = rotation
                             }
-                            .addOnFailureListener { it.printStackTrace() }
                             .addOnCompleteListener { imageProxy.close() }
                     }
 
@@ -96,7 +101,10 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
         FilterOverlay(
             faces = facesDetected,
             selectedFilter = selectedFilter,
-            previewView = previewViewState.value
+            previewView = previewViewState.value,
+            imgW = imageWidth,
+            imgH = imageHeight,
+            rotation = imageRotation,
         )
 
         // First face emotion
