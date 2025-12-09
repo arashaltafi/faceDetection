@@ -42,9 +42,8 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
 
         FaceDetection.getClient(options)
     }
-
+    val previewViewState = remember { mutableStateOf<PreviewView?>(null) }
     var facesDetected by remember { mutableStateOf<List<Face>>(emptyList()) }
-    val facesState = remember { mutableStateOf<List<Face>>(emptyList()) }
 
     Box(Modifier.fillMaxSize()) {
         // CAMERA PREVIEW
@@ -52,6 +51,7 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 val previewView = PreviewView(ctx)
+                previewViewState.value = previewView
 
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                 cameraProviderFuture.addListener({
@@ -73,7 +73,6 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
                         faceDetector.process(input)
                             .addOnSuccessListener { faces ->
                                 facesDetected = faces
-                                facesState.value = faces
                             }
                             .addOnFailureListener { it.printStackTrace() }
                             .addOnCompleteListener { imageProxy.close() }
@@ -94,7 +93,11 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
         )
 
         // FACE OVERLAY CANVAS
-        FilterOverlay(facesDetected, selectedFilter)
+        FilterOverlay(
+            faces = facesDetected,
+            selectedFilter = selectedFilter,
+            previewView = previewViewState.value
+        )
 
         // First face emotion
         Box(
@@ -102,7 +105,7 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
                 .align(Alignment.BottomStart)
                 .padding(12.dp)
         ) {
-            val face = facesState.value.firstOrNull()
+            val face = facesDetected.firstOrNull()
             if (face != null) {
                 Text(
                     text = "Emotion: ${detectEmotion(face)}",
