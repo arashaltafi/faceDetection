@@ -1,11 +1,7 @@
-@file:Suppress("OPT_IN_ARGUMENT_IS_NOT_MARKER")
-
 package ir.arash.altafi.facedetection
 
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
+import android.annotation.SuppressLint
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
@@ -26,31 +22,35 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.util.concurrent.Executors
 
-@androidx.annotation.OptIn(ExperimentalGetImage::class)
+@SuppressLint("UnsafeOptInUsageError")
 @OptIn(ExperimentalGetImage::class)
 @Composable
 fun CameraWithFilters(selectedFilter: FaceFilter) {
     val context = LocalContext.current
 
-    val faceDetector = remember {
-        val options = FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
-            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
-            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
-            .enableTracking()
-            .build()
-
-        FaceDetection.getClient(options)
-    }
     val previewViewState = remember { mutableStateOf<PreviewView?>(null) }
     var facesDetected by remember { mutableStateOf<List<Face>>(emptyList()) }
 
+    // track image sizes / rotation from analyzer
     var imageWidth by remember { mutableStateOf(0) }
     var imageHeight by remember { mutableStateOf(0) }
     var imageRotation by remember { mutableStateOf(0) }
 
+    // choose front camera
+    val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+
+    val faceDetector = remember {
+        FaceDetection.getClient(
+            FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+                .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
+                .build()
+        )
+    }
+
     Box(Modifier.fillMaxSize()) {
-        // CAMERA PREVIEW
+
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
@@ -59,45 +59,55 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
 
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                 cameraProviderFuture.addListener({
-
                     val cameraProvider = cameraProviderFuture.get()
+
                     val preview = Preview.Builder().build()
-                    val selector = CameraSelector.DEFAULT_FRONT_CAMERA
+                    preview.setSurfaceProvider(previewView.surfaceProvider)
 
                     val analysis = ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
 
                     analysis.setAnalyzer(Executors.newSingleThreadExecutor()) { imageProxy ->
-                        val mediaImage = imageProxy.image ?: return@setAnalyzer
-                        val rotation = imageProxy.imageInfo.rotationDegrees
-                        val input = InputImage.fromMediaImage(mediaImage, rotation)
+                        val mediaImage = imageProxy.image
+                        if (mediaImage == null) {
+                            imageProxy.close()
+                            return@setAnalyzer
+                        }
 
-                        faceDetector.process(input)
+                        // Save image info (width/height/rotation) for overlay mapping
+                        imageWidth = mediaImage.width
+                        imageHeight = mediaImage.height
+                        imageRotation = imageProxy.imageInfo.rotationDegrees
+
+                        val inputImage = InputImage.fromMediaImage(mediaImage, imageRotation)
+                        faceDetector.process(inputImage)
                             .addOnSuccessListener { faces ->
                                 facesDetected = faces
-                                imageWidth = mediaImage.width
-                                imageHeight = mediaImage.height
-                                imageRotation = rotation
                             }
-                            .addOnCompleteListener { imageProxy.close() }
+                            .addOnCompleteListener {
+                                imageProxy.close()
+                            }
                     }
 
-                    preview.surfaceProvider = previewView.surfaceProvider
-                    cameraProvider.bindToLifecycle(
-                        context as LifecycleOwner,
-                        selector,
-                        preview,
-                        analysis
-                    )
-
+                    try {
+                        cameraProvider.unbindAll()
+                        cameraProvider.bindToLifecycle(
+                            ctx as LifecycleOwner,
+                            cameraSelector,
+                            preview,
+                            analysis
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }, ContextCompat.getMainExecutor(ctx))
 
                 previewView
             }
         )
 
-        // FACE OVERLAY CANVAS
+        // overlay: pass imageWidth/imageHeight/rotation
         FilterOverlay(
             faces = facesDetected,
             selectedFilter = selectedFilter,
@@ -105,42 +115,20 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
             imgW = imageWidth,
             imgH = imageHeight,
             rotation = imageRotation,
+            isFrontCamera = true
         )
 
-        // First face emotion
+        // Simple status text
         Box(
             Modifier
                 .align(Alignment.BottomStart)
                 .padding(12.dp)
         ) {
             val face = facesDetected.firstOrNull()
-            if (face != null) {
-                Text(
-                    text = "Emotion: ${detectEmotion(face)}",
-                    color = androidx.compose.ui.graphics.Color.White,
-                )
-            } else {
-                Text(
-                    text = "No face",
-                    color = androidx.compose.ui.graphics.Color.White
-                )
-            }
+            Text(
+                text = face?.let { detectEmotion(it) } ?: "No face",
+                color = androidx.compose.ui.graphics.Color.White
+            )
         }
-    }
-}
-
-fun detectEmotion(
-    face: Face
-): String {
-    val smile = face.smilingProbability ?: -1f
-    val leftEye = face.leftEyeOpenProbability ?: -1f
-    val rightEye = face.rightEyeOpenProbability ?: -1f
-
-    return when {
-        smile > 0.7f -> "Happy 😊"
-        leftEye < 0.3f && rightEye < 0.3f -> "Sleepy 😴"
-        leftEye > 0.7f && rightEye > 0.7f -> "Surprised 😮"
-        smile < 0.2f -> "Angry 😠"
-        else -> "Neutral 😐"
     }
 }
