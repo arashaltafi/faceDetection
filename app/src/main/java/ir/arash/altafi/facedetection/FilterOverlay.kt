@@ -22,21 +22,20 @@ fun FilterOverlay(
     imgW: Int,
     imgH: Int,
     rotation: Int,
+    verticalNudgeRatio: Float = 0.06f,
+    horizontalNudgeRatio: Float = 0.00f,
     isFrontCamera: Boolean = true
 ) {
     if (previewView == null || selectedFilter == FaceFilter.NONE) return
     val resId = selectedFilter.resId ?: return
     val filterBitmap: ImageBitmap = ImageBitmap.imageResource(resId)
 
-    // view size (Compose Canvas size). We rely on previewView already measured.
     val viewW = previewView.width.toFloat()
     val viewH = previewView.height.toFloat()
     if (viewW == 0f || viewH == 0f) return
     if (imgW == 0 || imgH == 0) return
 
     Canvas(modifier = Modifier.fillMaxSize()) {
-
-        // rotate (x,y) according to image rotation degrees (MLKit coordinates)
         fun rotatePoint(
             x: Float,
             y: Float,
@@ -53,29 +52,35 @@ fun FilterOverlay(
             }
         }
 
-        // Compute rotated image logical width/height (after applying rotation)
+        // rotated image logical size
         val (imgRotW, imgRotH) = when (rotation) {
             90, 270 -> imgH to imgW
             else -> imgW to imgH
         }
 
-        // Compute center-crop scale (PreviewView usually center-crops)
+        // center-crop scale (PreviewView commonly uses center-crop / fill)
         val scale = max(viewW / imgRotW.toFloat(), viewH / imgRotH.toFloat())
         val scaledImgW = imgRotW * scale
         val scaledImgH = imgRotH * scale
         val offsetX = (viewW - scaledImgW) / 2f
         val offsetY = (viewH - scaledImgH) / 2f
 
+        // Determine if we should mirror X:
+        // Many apps set previewView.scaleX = -1f to mirror the preview for front camera.
+        // If previewView.scaleX < 0 -> preview already mirrored, so DON'T mirror again.
+        val previewAlreadyMirrored = previewView.scaleX < 0f
+        val shouldApplyMirror = isFrontCamera && !previewAlreadyMirrored
+
         fun mapToView(x: Float, y: Float): Pair<Float, Float> {
-            // rotate MLKit point
+            // rotate MLKit coordinate into rotated image space
             var (rx, ry) = rotatePoint(x, y, rotation, imgW, imgH)
 
-            // mirror for front camera
-            if (isFrontCamera) {
+            // apply mirror only if needed
+            if (shouldApplyMirror) {
                 rx = imgRotW.toFloat() - rx
             }
 
-            // scale & translate to view coords
+            // scale & translate to view coordinates
             val vx = rx * scale + offsetX
             val vy = ry * scale + offsetY
             return vx to vy
@@ -92,14 +97,15 @@ fun FilterOverlay(
             val cy = (ly + ry) / 2f
 
             val eyeDistance = hypot(rx - lx, ry - ly)
-            // adjust multiplier empirically if needed
+            // scale factor — tweak multiplier if glasses look too large/small
             val bitScale = (eyeDistance / filterBitmap.width) * 2.2f
 
             val dstW = (filterBitmap.width * bitScale).toInt()
             val dstH = (filterBitmap.height * bitScale).toInt()
 
-            val offX = (cx - dstW / 2f).toInt()
-            val offY = (cy - dstH / 2f).toInt()
+            // apply small nudges to center the glasses better on eyes:
+            val offX = (cx - dstW / 2f + dstW * horizontalNudgeRatio).toInt()
+            val offY = (cy - dstH / 2f + dstH * verticalNudgeRatio).toInt()
 
             drawImage(
                 image = filterBitmap,

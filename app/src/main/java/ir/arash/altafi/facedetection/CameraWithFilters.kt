@@ -115,6 +115,8 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
             imgW = imageWidth,
             imgH = imageHeight,
             rotation = imageRotation,
+            verticalNudgeRatio = 0.06f,
+            horizontalNudgeRatio = 0.00f,
             isFrontCamera = true
         )
 
