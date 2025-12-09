@@ -30,11 +30,12 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
 
     val previewViewState = remember { mutableStateOf<PreviewView?>(null) }
     var facesDetected by remember { mutableStateOf<List<Face>>(emptyList()) }
+    val facesState = remember { mutableStateOf<List<Face>>(emptyList()) }
 
     // track image sizes / rotation from analyzer
-    var imageWidth by remember { mutableStateOf(0) }
-    var imageHeight by remember { mutableStateOf(0) }
-    var imageRotation by remember { mutableStateOf(0) }
+    var imageWidth by remember { mutableIntStateOf(0) }
+    var imageHeight by remember { mutableIntStateOf(0) }
+    var imageRotation by remember { mutableIntStateOf(0) }
 
     // choose front camera
     val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
@@ -84,6 +85,7 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
                         faceDetector.process(inputImage)
                             .addOnSuccessListener { faces ->
                                 facesDetected = faces
+                                facesState.value = faces
                             }
                             .addOnCompleteListener {
                                 imageProxy.close()
@@ -126,7 +128,7 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
                 .align(Alignment.BottomStart)
                 .padding(12.dp)
         ) {
-            val face = facesDetected.firstOrNull()
+            val face = facesState.value.firstOrNull()
             Text(
                 text = face?.let { detectEmotion(it) } ?: "No face",
                 color = androidx.compose.ui.graphics.Color.White
