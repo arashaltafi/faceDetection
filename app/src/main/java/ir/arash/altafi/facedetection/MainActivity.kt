@@ -16,7 +16,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             FaceDetectionTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    FaceFilterScreen(innerPadding)
+//                    FaceFilterScreen(innerPadding)
+                    BeautyDetectorScreen(innerPadding)
                 }
             }
         }

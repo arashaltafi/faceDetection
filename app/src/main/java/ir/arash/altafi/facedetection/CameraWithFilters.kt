@@ -53,7 +53,6 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
     var imageRotation by remember { mutableIntStateOf(0) }
 
     Box(Modifier.fillMaxSize()) {
-
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
