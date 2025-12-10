@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -178,85 +177,134 @@ class FaceAnalyzer(
                 imageProxy.close()
             }
     }
+}
 
-    // Helper distance function
-    private fun dist(a: FaceLandmark?, b: FaceLandmark?): Float {
-        if (a == null || b == null) return 0f
-        val dx = a.position.x - b.position.x
-        val dy = a.position.y - b.position.y
-        return sqrt(dx * dx + dy * dy)
+// Helper distance function
+private fun dist(a: FaceLandmark?, b: FaceLandmark?): Float {
+    if (a == null || b == null) return 0f
+    val dx = a.position.x - b.position.x
+    val dy = a.position.y - b.position.y
+    return sqrt(dx * dx + dy * dy)
+}
+
+// 1. Golden Ratio Calculation
+private fun calcGoldenRatio(face: Face): Int {
+    val lEye = face.getLandmark(FaceLandmark.LEFT_EYE)
+    val rEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
+    val mLeft = face.getLandmark(FaceLandmark.MOUTH_LEFT)
+    val mRight = face.getLandmark(FaceLandmark.MOUTH_RIGHT)
+    val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
+
+    if (lEye == null || rEye == null || mLeft == null || mRight == null || nose == null)
+        return 0
+
+    val faceW = face.boundingBox.width().toFloat().coerceAtLeast(1f)
+    val faceH = face.boundingBox.height().toFloat().coerceAtLeast(1f)
+
+    val eyeDist = dist(lEye, rEye)
+    val mouthW = dist(mLeft, mRight)
+    val eyeCenterY = (lEye.position.y + rEye.position.y) / 2f
+    val noseToEye = abs(nose.position.y - eyeCenterY)
+    val noseToChin = abs(face.boundingBox.bottom - nose.position.y)
+
+    // Ratios
+    val r1 = faceH / faceW           // ideal ~1.5
+    val r2 = eyeDist / faceW         // ideal ~0.46
+    val r3 = mouthW / eyeDist        // ideal ~1.5
+    val r4 = noseToEye / faceH       // ideal ~0.33
+    val r5 = noseToChin / faceH      // ideal ~0.25
+
+    fun err(a: Float, ideal: Float) = abs(a - ideal) / ideal
+
+    val e = (
+            err(r1, 1.5f) * 0.25f +
+                    err(r2, 0.46f) * 0.25f +
+                    err(r3, 1.5f) * 0.20f +
+                    err(r4, 0.33f) * 0.15f +
+                    err(r5, 0.25f) * 0.15f
+            )
+
+    val score = (100 - e * 120).coerceIn(0f, 100f)
+
+    return score.roundToInt()
+}
+
+// 2. Facial Symmetry Calculation
+private fun calcSymmetry(face: Face): Int {
+    val cx = face.boundingBox.centerX().toFloat()
+    val fw = face.boundingBox.width().toFloat().coerceAtLeast(1f)
+
+    fun dx(l: FaceLandmark?, r: FaceLandmark?): Float {
+        if (l == null || r == null) return 0.5f
+        return abs(abs(cx - l.position.x) - abs(cx - r.position.x)) / fw
     }
 
-    // 1. Golden Ratio Calculation
-    private fun calcGoldenRatio(face: Face): Int {
-        val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
-        val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
-        val mouthLeft = face.getLandmark(FaceLandmark.MOUTH_LEFT)
-        val mouthRight = face.getLandmark(FaceLandmark.MOUTH_RIGHT)
+    val eEye = dx(
+        face.getLandmark(FaceLandmark.LEFT_EYE),
+        face.getLandmark(FaceLandmark.RIGHT_EYE)
+    )
+    val eCheek = dx(
+        face.getLandmark(FaceLandmark.LEFT_CHEEK),
+        face.getLandmark(FaceLandmark.RIGHT_CHEEK)
+    )
+    val eMouth = dx(
+        face.getLandmark(FaceLandmark.MOUTH_LEFT),
+        face.getLandmark(FaceLandmark.MOUTH_RIGHT)
+    )
 
-        val eyeDistance = dist(leftEye, rightEye)
-        val mouthWidth = dist(mouthLeft, mouthRight)
+    val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
+    val noseOffset = if (nose != null) abs(cx - nose.position.x) / fw else 0.1f
 
-        val faceWidth = face.boundingBox.width().toFloat()
+    val totalErr =
+        eEye * 0.40f +
+                eCheek * 0.30f +
+                eMouth * 0.20f +
+                noseOffset * 0.10f
 
-        val eyeRatio = eyeDistance / faceWidth
-        val mouthRatio = mouthWidth / (eyeDistance + 1f)
+    val score = (100 - totalErr * 150).coerceIn(0f, 100f)
 
-        val idealEye = 0.46f
-        val idealMouth = 1.5f
+    return score.roundToInt()
+}
 
-        val error =
-            abs(eyeRatio - idealEye) * 100 + abs(mouthRatio - idealMouth) * 20
+// 3. Proportion of Eye–Nose–Mouth
+private fun calcProportion(face: Face): Int {
+    val lEye = face.getLandmark(FaceLandmark.LEFT_EYE)
+    val rEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
+    val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
+    val mouth = face.getLandmark(FaceLandmark.MOUTH_BOTTOM)
+    val mLeft = face.getLandmark(FaceLandmark.MOUTH_LEFT)
+    val mRight = face.getLandmark(FaceLandmark.MOUTH_RIGHT)
 
-        return max(0, (100 - error).toInt())
-    }
+    if (lEye == null || rEye == null || nose == null || mouth == null || mLeft == null || mRight == null)
+        return 0
 
-    // 2. Facial Symmetry Calculation
-    private fun calcSymmetry(face: Face): Int {
-        val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
-        val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
+    val faceH = face.boundingBox.height().toFloat().coerceAtLeast(1f)
+    val faceW = face.boundingBox.width().toFloat().coerceAtLeast(1f)
 
-        if (leftEye == null || rightEye == null) return 0
+    val eyeCenterY = (lEye.position.y + rEye.position.y) / 2f
 
-        val faceCenterX = face.boundingBox.centerX().toFloat()
+    val eyeToNose = abs(nose.position.y - eyeCenterY)
+    val noseToMouth = abs(mouth.position.y - nose.position.y)
+    val noseToChin = abs(face.boundingBox.bottom - nose.position.y)
 
-        val leftDist = abs(faceCenterX - leftEye.position.x)
-        val rightDist = abs(rightEye.position.x - faceCenterX)
+    val eyeDist = dist(lEye, rEye)
+    val mouthW = dist(mLeft, mRight)
 
-        val diff = abs(leftDist - rightDist)
+    val r1 = eyeToNose / noseToMouth       // ideal ~1
+    val r2 = eyeDist / faceW               // ideal ~0.46
+    val r3 = mouthW / faceW                // ideal ~0.40
+    val r4 = noseToChin / faceH            // ideal ~0.25
 
-        return max(0, (100 - diff * 2).toInt())
-    }
+    fun err(a: Float, ideal: Float) = abs(a - ideal) / ideal
 
-    // 3. Proportion of Eye–Nose–Mouth
-    private fun calcProportion(face: Face): Int {
-        val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
-        val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
-        val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
-        val mouthBottom = face.getLandmark(FaceLandmark.MOUTH_BOTTOM)
+    val e = (
+            err(r1, 1f) * 0.40f +
+                    err(r2, 0.46f) * 0.30f +
+                    err(r3, 0.40f) * 0.20f +
+                    err(r4, 0.25f) * 0.10f
+            )
 
-        if (leftEye == null || rightEye == null || nose == null || mouthBottom == null)
-            return 0
+    val score = (100 - e * 130).coerceIn(0f, 100f)
 
-        // Correct eye center
-        val eyeCenterY = (leftEye.position.y + rightEye.position.y) / 2f
-
-        // Distances
-        val eyeToNose = abs(nose.position.y - eyeCenterY)
-        val noseToMouth = abs(mouthBottom.position.y - nose.position.y)
-
-        if (eyeToNose <= 0f || noseToMouth <= 0f) return 0
-
-        // Real-world facial ideal ratio ~ 1.0
-        val ratio = eyeToNose / noseToMouth
-        val idealRatio = 1.0f
-
-        // Difference percentage
-        val diff = abs(ratio - idealRatio)
-
-        // Convert to score
-        val score = (100 - diff * 40f).toInt() // controlled decay
-
-        return score.coerceIn(0, 100)
-    }
+    return score.roundToInt()
 }
