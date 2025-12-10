@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -25,7 +26,10 @@ import kotlin.math.*
 
 @Composable
 fun BeautyDetectorScreen(innerPadding: PaddingValues) {
-    var beautyPercentage by remember { mutableIntStateOf(0) }
+    var goldenRatio by remember { mutableIntStateOf(0) }
+    var symmetry by remember { mutableIntStateOf(0) }
+    var proportion by remember { mutableIntStateOf(0) }
+    var totalScore by remember { mutableIntStateOf(0) }
     var faceDetected by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -35,7 +39,7 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
             .fillMaxSize()
             .padding(innerPadding),
     ) {
-
+        // CAMERA PREVIEW
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -44,12 +48,11 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
             AndroidView(
                 factory = { ctx ->
                     val previewView = PreviewView(ctx)
-
-                    val cameraProviderFuture =
-                        ProcessCameraProvider.getInstance(ctx)
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
 
                     cameraProviderFuture.addListener({
                         val cameraProvider = cameraProviderFuture.get()
+                        val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
                         val preview = Preview.Builder().build()
                             .also { it.surfaceProvider = previewView.surfaceProvider }
@@ -61,18 +64,16 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
                                 it.setAnalyzer(
                                     Executors.newSingleThreadExecutor(),
                                     FaceAnalyzer(
-                                        onBeautyScore = {
-                                            beautyPercentage = it
-                                        },
-                                        onFaceDetected = { detected ->
+                                        onResults = { g, s, p, t, detected ->
+                                            goldenRatio = g
+                                            symmetry = s
+                                            proportion = p
+                                            totalScore = t
                                             faceDetected = detected
                                         }
                                     )
                                 )
                             }
-
-                        val cameraSelector =
-                            CameraSelector.DEFAULT_FRONT_CAMERA
 
                         cameraProvider.unbindAll()
                         cameraProvider.bindToLifecycle(
@@ -89,86 +90,153 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
             )
         }
 
-        Button(
-            onClick = { /* No action needed – real-time value updates */ },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text("Calculate Beauty")
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (!faceDetected) {
+                Text(
+                    text = stringResource(R.string.no_face_detected),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.golden_ratio) + " " + goldenRatio,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.facial_symmetry) + " " + symmetry,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.proportion_score) + " " + proportion,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.total_beauty_score) + " " + totalScore,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
         }
-
-        Text(
-            text = if (faceDetected)
-                "Your facial beauty percentage: $beautyPercentage%"
-            else
-                "No face detected",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier
-                .padding(16.dp)
-        )
     }
 }
 
 class FaceAnalyzer(
-    private val onBeautyScore: (Int) -> Unit,
-    private val onFaceDetected: (Boolean) -> Unit
+    private val onResults: (
+        Int,   // Golden Ratio
+        Int,   // Symmetry
+        Int,   // Proportion
+        Int,   // Total Beauty
+        Boolean  // detected
+    ) -> Unit
 ) : ImageAnalysis.Analyzer {
-
-    private val detector =
-        FaceDetection.getClient(
-            FaceDetectorOptions.Builder()
-                .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
-                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                .build()
-        )
+    private val detector = FaceDetection.getClient(
+        FaceDetectorOptions.Builder()
+            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+            .build()
+    )
 
     @androidx.annotation.OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image ?: return
+        val mediaImage = imageProxy.image
+        if (mediaImage == null) {
+            imageProxy.close()
+            return
+        }
 
-        val inputImage =
-            InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 
         detector.process(inputImage)
             .addOnSuccessListener { faces ->
                 if (faces.isNotEmpty()) {
-                    onFaceDetected(true)
-                    val score = calculateBeauty(faces[0])
-                    onBeautyScore(score)
+                    val face = faces[0]
+
+                    val golden = calcGoldenRatio(face)
+                    val symmetry = calcSymmetry(face)
+                    val proportion = calcProportion(face)
+
+                    val total = ((golden + symmetry + proportion) / 3f).toInt().coerceIn(0, 100)
+
+                    onResults(golden, symmetry, proportion, total, true)
                 } else {
-                    onFaceDetected(false)
+                    onResults(0, 0, 0, 0, false)
                 }
+            }
+            .addOnCompleteListener { imageProxy.close() }
+            .addOnFailureListener {
+                onResults(0, 0, 0, 0, false)
             }
             .addOnCompleteListener {
                 imageProxy.close()
             }
     }
 
-    private fun calculateBeauty(face: Face): Int {
+    // Helper distance function
+    private fun dist(a: FaceLandmark?, b: FaceLandmark?): Float {
+        if (a == null || b == null) return 0f
+        val dx = a.position.x - b.position.x
+        val dy = a.position.y - b.position.y
+        return sqrt(dx * dx + dy * dy)
+    }
 
-        fun dist(l1: FaceLandmark?, l2: FaceLandmark?): Float {
-            if (l1 == null || l2 == null) return 0f
-            val dx = l1.position.x - l2.position.x
-            val dy = l1.position.y - l2.position.y
-            return sqrt(dx * dx + dy * dy)
-        }
-
+    // 1. Golden Ratio Calculation
+    private fun calcGoldenRatio(face: Face): Int {
         val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
         val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
-        val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
         val mouthLeft = face.getLandmark(FaceLandmark.MOUTH_LEFT)
         val mouthRight = face.getLandmark(FaceLandmark.MOUTH_RIGHT)
 
         val eyeDistance = dist(leftEye, rightEye)
-        val eyeNose = dist(nose, leftEye) + dist(nose, rightEye)
         val mouthWidth = dist(mouthLeft, mouthRight)
 
-        // Simple demo formula
-        var score = (eyeDistance + mouthWidth) / (eyeNose + 1f) * 30f
+        val faceWidth = face.boundingBox.width().toFloat()
 
-        score = min(100f, max(0f, score))
+        val eyeRatio = eyeDistance / faceWidth
+        val mouthRatio = mouthWidth / (eyeDistance + 1f)
 
-        return score.toInt()
+        val idealEye = 0.46f
+        val idealMouth = 1.5f
+
+        val error =
+            abs(eyeRatio - idealEye) * 100 + abs(mouthRatio - idealMouth) * 20
+
+        return max(0, (100 - error).toInt())
+    }
+
+    // 2. Facial Symmetry Calculation
+    private fun calcSymmetry(face: Face): Int {
+        val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
+        val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
+
+        if (leftEye == null || rightEye == null) return 0
+
+        val faceCenterX = face.boundingBox.centerX().toFloat()
+
+        val leftDist = abs(faceCenterX - leftEye.position.x)
+        val rightDist = abs(rightEye.position.x - faceCenterX)
+
+        val diff = abs(leftDist - rightDist)
+
+        return max(0, (100 - diff * 2).toInt())
+    }
+
+    // 3. Proportion of Eye–Nose–Mouth
+    private fun calcProportion(face: Face): Int {
+        val leftEye = face.getLandmark(FaceLandmark.LEFT_EYE)
+        val rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE)
+        val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
+        val mouthBottom = face.getLandmark(FaceLandmark.MOUTH_BOTTOM)
+
+        val eyeCenterX = rightEye?.position?.x?.let { (leftEye?.position?.x ?: (0f + it)) / 2f }
+        val eyeCenterY = rightEye?.position?.y?.let { (leftEye?.position?.y ?: (0f + it)) / 2f }
+
+        val eyeToNose = eyeCenterY?.let { abs(nose?.position?.y ?: (0f - it)) }
+        val noseToMouth = abs((mouthBottom?.position?.y ?: 0f) - (nose?.position?.y ?: 0f))
+
+        val idealRatio = 1f
+        val ratio = (eyeToNose?.div((noseToMouth + 1f)))
+
+        val error = abs(ratio?.minus(idealRatio) ?: 0f) * 50f
+
+        return max(0, (100 - error).toInt())
     }
 }

@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">FaceDetection</string>
+
+    <string name="no_face_detected">چهره شناسایی نشد</string>
+    <string name="proportion_score">امتیاز تناسب:</string>
+    <string name="facial_symmetry">تقارن صورت:</string>
+    <string name="golden_ratio">نسبت طلایی:</string>
+    <string name="total_beauty_score">امتیاز کلی زیبایی:</string>
 </resources>
