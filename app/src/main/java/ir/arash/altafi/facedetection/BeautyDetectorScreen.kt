@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -90,30 +93,36 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
             )
         }
 
-        Column(modifier = Modifier.padding(16.dp)) {
-            if (!faceDetected) {
-                Text(
-                    text = stringResource(R.string.no_face_detected),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.golden_ratio) + " " + goldenRatio + "%",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = stringResource(R.string.facial_symmetry) + " " + symmetry + "%",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = stringResource(R.string.proportion_score) + " " + proportion + "%",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = stringResource(R.string.total_beauty_score) + " " + totalScore + "%",
-                    style = MaterialTheme.typography.titleMedium
-                )
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                if (!faceDetected) {
+                    Text(
+                        text = stringResource(R.string.no_face_detected),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                } else {
+                    Text(
+                        text = "${stringResource(R.string.golden_ratio)} % $goldenRatio",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = "${stringResource(R.string.facial_symmetry)} % $symmetry",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "${stringResource(R.string.proportion_score)} % $proportion",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "${stringResource(R.string.total_beauty_score)} % $totalScore",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
         }
     }
