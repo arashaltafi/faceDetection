@@ -99,19 +99,19 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
                 )
             } else {
                 Text(
-                    text = stringResource(R.string.golden_ratio) + " " + goldenRatio,
+                    text = stringResource(R.string.golden_ratio) + " " + goldenRatio + "%",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = stringResource(R.string.facial_symmetry) + " " + symmetry,
+                    text = stringResource(R.string.facial_symmetry) + " " + symmetry + "%",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = stringResource(R.string.proportion_score) + " " + proportion,
+                    text = stringResource(R.string.proportion_score) + " " + proportion + "%",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = stringResource(R.string.total_beauty_score) + " " + totalScore,
+                    text = stringResource(R.string.total_beauty_score) + " " + totalScore + "%",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -226,17 +226,28 @@ class FaceAnalyzer(
         val nose = face.getLandmark(FaceLandmark.NOSE_BASE)
         val mouthBottom = face.getLandmark(FaceLandmark.MOUTH_BOTTOM)
 
-        val eyeCenterX = rightEye?.position?.x?.let { (leftEye?.position?.x ?: (0f + it)) / 2f }
-        val eyeCenterY = rightEye?.position?.y?.let { (leftEye?.position?.y ?: (0f + it)) / 2f }
+        if (leftEye == null || rightEye == null || nose == null || mouthBottom == null)
+            return 0
 
-        val eyeToNose = eyeCenterY?.let { abs(nose?.position?.y ?: (0f - it)) }
-        val noseToMouth = abs((mouthBottom?.position?.y ?: 0f) - (nose?.position?.y ?: 0f))
+        // Correct eye center
+        val eyeCenterY = (leftEye.position.y + rightEye.position.y) / 2f
 
-        val idealRatio = 1f
-        val ratio = (eyeToNose?.div((noseToMouth + 1f)))
+        // Distances
+        val eyeToNose = abs(nose.position.y - eyeCenterY)
+        val noseToMouth = abs(mouthBottom.position.y - nose.position.y)
 
-        val error = abs(ratio?.minus(idealRatio) ?: 0f) * 50f
+        if (eyeToNose <= 0f || noseToMouth <= 0f) return 0
 
-        return max(0, (100 - error).toInt())
+        // Real-world facial ideal ratio ~ 1.0
+        val ratio = eyeToNose / noseToMouth
+        val idealRatio = 1.0f
+
+        // Difference percentage
+        val diff = abs(ratio - idealRatio)
+
+        // Convert to score
+        val score = (100 - diff * 40f).toInt() // controlled decay
+
+        return score.coerceIn(0, 100)
     }
 }
