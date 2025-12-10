@@ -107,19 +107,19 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
                     )
                 } else {
                     Text(
-                        text = "${stringResource(R.string.golden_ratio)} % $goldenRatio",
+                        text = "${stringResource(R.string.golden_ratio)} %$goldenRatio",
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
-                        text = "${stringResource(R.string.facial_symmetry)} % $symmetry",
+                        text = "${stringResource(R.string.facial_symmetry)} %$symmetry",
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "${stringResource(R.string.proportion_score)} % $proportion",
+                        text = "${stringResource(R.string.proportion_score)} %$proportion",
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "${stringResource(R.string.total_beauty_score)} % $totalScore",
+                        text = "${stringResource(R.string.total_beauty_score)} %$totalScore",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
