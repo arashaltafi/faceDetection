@@ -1,5 +1,8 @@
 package ir.arash.altafi.facedetection.ui.page
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,6 +13,15 @@ import ir.arash.altafi.facedetection.ui.navigation.Route
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
+
+    var hasPermission by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -18,7 +30,11 @@ fun HomeScreen(navController: NavHostController) {
     ) {
         Button(
             onClick = {
-                navController.navigate(Route.BeautyDetector)
+                if (!hasPermission) {
+                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                } else {
+                    navController.navigate(Route.BeautyDetector)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -31,7 +47,11 @@ fun HomeScreen(navController: NavHostController) {
 
         Button(
             onClick = {
-                navController.navigate(Route.FaceFilter)
+                if (!hasPermission) {
+                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                } else {
+                    navController.navigate(Route.FaceFilter)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
