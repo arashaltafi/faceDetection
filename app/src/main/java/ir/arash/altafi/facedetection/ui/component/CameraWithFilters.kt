@@ -1,6 +1,6 @@
 @file:Suppress("OPT_IN_ARGUMENT_IS_NOT_MARKER")
 
-package ir.arash.altafi.facedetection
+package ir.arash.altafi.facedetection.ui.component
 
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -122,12 +123,12 @@ fun CameraWithFilters(selectedFilter: FaceFilter) {
             if (face != null) {
                 Text(
                     text = "Emotion: ${detectEmotion(face)}",
-                    color = androidx.compose.ui.graphics.Color.White,
+                    color = Color.White,
                 )
             } else {
                 Text(
                     text = "No face",
-                    color = androidx.compose.ui.graphics.Color.White
+                    color = Color.White
                 )
             }
         }

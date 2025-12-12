@@ -1,4 +1,4 @@
-package ir.arash.altafi.facedetection
+package ir.arash.altafi.facedetection.ui.component
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize

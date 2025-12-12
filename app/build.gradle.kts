@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("kotlin-kapt")
+    id("kotlin-parcelize")
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.21"
 }
 
 android {
@@ -54,6 +57,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    // Serialization
+    implementation(libs.kotlinx.serialization.json)
+
+    // navigation
+    implementation(libs.androidx.navigation.compose)
 
     // CameraX
     implementation(libs.androidx.camera.core)

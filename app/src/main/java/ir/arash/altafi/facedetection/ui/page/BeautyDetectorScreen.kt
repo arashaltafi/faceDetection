@@ -1,5 +1,6 @@
-package ir.arash.altafi.facedetection
+package ir.arash.altafi.facedetection.ui.page
 
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
@@ -23,11 +24,12 @@ import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.face.FaceLandmark
+import ir.arash.altafi.facedetection.R
 import java.util.concurrent.Executors
 import kotlin.math.*
 
 @Composable
-fun BeautyDetectorScreen(innerPadding: PaddingValues) {
+fun BeautyDetectorScreen() {
     var goldenRatio by remember { mutableIntStateOf(0) }
     var symmetry by remember { mutableIntStateOf(0) }
     var proportion by remember { mutableIntStateOf(0) }
@@ -39,7 +41,6 @@ fun BeautyDetectorScreen(innerPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding),
     ) {
         // CAMERA PREVIEW
         Box(
@@ -143,7 +144,7 @@ class FaceAnalyzer(
             .build()
     )
 
-    @androidx.annotation.OptIn(ExperimentalGetImage::class)
+    @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
         if (mediaImage == null) {

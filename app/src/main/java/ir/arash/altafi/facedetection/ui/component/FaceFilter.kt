@@ -1,4 +1,6 @@
-package ir.arash.altafi.facedetection
+package ir.arash.altafi.facedetection.ui.component
+
+import ir.arash.altafi.facedetection.R
 
 enum class FaceFilter(val resId: Int?) {
     NONE(null),

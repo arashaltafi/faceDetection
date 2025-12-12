@@ -1,6 +1,5 @@
 package ir.arash.altafi.facedetection.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -12,31 +11,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Blue300,
+    secondary = Sky400,
+    tertiary = Teal200,
+    background = Gray950,
+    surface = Gray975,
+    onPrimary = Black,
+    onSecondary = Black,
+    onTertiary = Black,
+    onBackground = Gray300,
+    onSurface = Gray500,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = Blue500,
+    secondary = Sky500,
+    tertiary = Teal300,
+    background = White,
+    surface = Gray100,
+    onPrimary = White,
+    onSecondary = White,
+    onTertiary = White,
+    onBackground = Gray900,
+    onSurface = Gray700,
 )
 
 @Composable
 fun FaceDetectionTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

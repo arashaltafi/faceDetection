@@ -1,4 +1,4 @@
-package ir.arash.altafi.facedetection
+package ir.arash.altafi.facedetection.ui.component
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*

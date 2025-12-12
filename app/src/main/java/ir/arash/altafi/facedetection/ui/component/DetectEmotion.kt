@@ -1,4 +1,4 @@
-package ir.arash.altafi.facedetection
+package ir.arash.altafi.facedetection.ui.component
 
 import com.google.mlkit.vision.face.Face
 

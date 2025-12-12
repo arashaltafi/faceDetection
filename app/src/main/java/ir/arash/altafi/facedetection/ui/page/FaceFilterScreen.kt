@@ -1,9 +1,8 @@
-package ir.arash.altafi.facedetection
+package ir.arash.altafi.facedetection.ui.page
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,15 +10,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ir.arash.altafi.facedetection.ui.component.CameraWithFilters
+import ir.arash.altafi.facedetection.ui.component.FaceFilter
+import ir.arash.altafi.facedetection.ui.component.FilterButton
 
 @Composable
-fun FaceFilterScreen(innerPadding: PaddingValues) {
+fun FaceFilterScreen() {
     var selectedFilter by remember { mutableStateOf(FaceFilter.NONE) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding)
     ) {
         // Camera + Filters
         Box(modifier = Modifier.weight(1f)) {
